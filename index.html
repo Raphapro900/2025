@@ -12,6 +12,29 @@
       align-items: center;
       background: #000;
       flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Intro video */
+    #introVideo {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 100;
+      background: #000;
+    }
+
+    /* Main content (hidden until video ends) */
+    #mainContent {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100%;
     }
 
     .container {
@@ -26,7 +49,7 @@
       left: 50%;
       transform: translate(-50%, -50%);
       width: 200px;
-      cursor: pointer; /* click habilitado */
+      cursor: pointer;
     }
 
     .hand-left, .hand-right {
@@ -38,7 +61,7 @@
     .hand-left {
       bottom: 0;
       left: 0;
-      transform: scaleX(-1); /* mano izquierda volteada */
+      transform: scaleX(-1);
     }
 
     .hand-right {
@@ -57,6 +80,8 @@
       padding: 8px 12px;
       color: #fff;
       font-family: sans-serif;
+      flex-wrap: wrap;
+      justify-content: center;
     }
 
     .btn {
@@ -68,37 +93,55 @@
       color: #fff;
       border: 1px solid rgba(255,255,255,0.2);
     }
-    .btn:hover { background: #555; }
-    .hint { opacity: 0.7; font-size: 12px; }
+
+    .btn:hover {
+      background: #555;
+    }
+
+    .hint {
+      opacity: 0.7;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- Imagen central -->
-    <img src="sixeven2.png" alt="SixEven" class="center" id="sixEven">
-    <!-- Mano izquierda -->
-    <img src="67 mano.png" alt="Mano Izquierda" class="hand-left" id="handLeft">
-    <!-- Mano derecha -->
-    <img src="67 mano.png" alt="Mano Derecha" class="hand-right" id="handRight">
-  </div>
 
-  <!-- Audio principal -->
-  <audio id="audio67" src="67.wav" loop></audio>
-  <!-- Audio secundario al click -->
-  <audio id="audioSixSeven" src="SIX SEVEN.mp3"></audio>
+  <!-- Intro video -->
+  <video id="introVideo" src="intro.mp4" autoplay muted playsinline></video>
 
-  <div class="audio-ctrl">
-    <button class="btn" id="playPause">Reproducir</button>
-    <label>
-      Volumen
-      <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"/>
-    </label>
-    <span class="hint">Si el navegador bloquea autoplay, usa “Reproducir”.</span>
+  <!-- Main content (hidden at start) -->
+  <div id="mainContent">
+    <div class="container">
+      <!-- Imagen central -->
+      <img src="sixeven2.png" alt="SixEven" class="center" id="sixEven">
+      <!-- Mano izquierda -->
+      <img src="67 mano.png" alt="Mano Izquierda" class="hand-left" id="handLeft">
+      <!-- Mano derecha -->
+      <img src="67 mano.png" alt="Mano Derecha" class="hand-right" id="handRight">
+    </div>
+
+    <!-- Audio principal -->
+    <audio id="audio67" src="67.wav" loop></audio>
+    <!-- Audio secundario al click -->
+    <audio id="audioSixSeven" src="SIX SEVEN.mp3"></audio>
+
+    <div class="audio-ctrl">
+      <button class="btn" id="playPause">Reproducir</button>
+      <button class="btn" id="oldBtn">67 OLD</button>
+      <label>
+        Volumen
+        <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"/>
+      </label>
+      <span class="hint">Si el navegador bloquea autoplay, usa “Reproducir”.</span>
+    </div>
   </div>
 
   <script>
+    const introVideo = document.getElementById('introVideo');
+    const mainContent = document.getElementById('mainContent');
     const audio = document.getElementById('audio67');
     const playBtn = document.getElementById('playPause');
+    const oldBtn = document.getElementById('oldBtn');
     const vol = document.getElementById('volume');
     const handLeft = document.getElementById('handLeft');
     const handRight = document.getElementById('handRight');
@@ -108,32 +151,53 @@
     let interval;
     const beatDuration = 60 / 130 * 1000; // ~462 ms por beat
 
+    // When intro ends → show main content
+    introVideo.addEventListener('ended', () => {
+      introVideo.style.display = 'none';
+      mainContent.style.display = 'flex';
+    });
+
+    // Fallback: if video fails to load, show main content after a short delay
+    introVideo.addEventListener('error', () => {
+      setTimeout(() => {
+        introVideo.style.display = 'none';
+        mainContent.style.display = 'flex';
+      }, 500);
+    });
+
+    // Play / Pause button
     playBtn.addEventListener('click', async () => {
       if (audio.paused) {
-        audio.currentTime = 0; // reinicia siempre
+        audio.currentTime = 0;
         await audio.play();
         playBtn.textContent = 'Pausar';
         startHands();
       } else {
         audio.pause();
-        audio.currentTime = 0; // al pausar, reinicia
+        audio.currentTime = 0;
         playBtn.textContent = 'Reproducir';
         stopHands();
       }
     });
 
+    // Volume control
     vol.addEventListener('input', (e) => {
       audio.volume = parseFloat(e.target.value);
     });
 
-    // Click en sixeven.png → suena SIX SEVEN.mp3
+    // Click on center image → play "SIX SEVEN.mp3"
     sixEven.addEventListener('click', () => {
       audioSixSeven.currentTime = 0;
       audioSixSeven.play();
     });
 
+    // "67 OLD" button → change center image to sixeven.png
+    oldBtn.addEventListener('click', () => {
+      sixEven.src = 'sixeven.png';
+    });
+
     function startHands() {
-      stopHands(); // limpiar cualquier animación previa
+      stopHands();
       let toggle = false;
       interval = setInterval(() => {
         toggle = !toggle;
