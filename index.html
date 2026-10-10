@@ -13,6 +13,7 @@
       background: #000;
       flex-direction: column;
       overflow: hidden;
+      font-family: sans-serif;
     }
 
     /* Intro video */
@@ -25,6 +26,33 @@
       object-fit: cover;
       z-index: 100;
       background: #000;
+    }
+
+    /* Overlay para indicar que hay que hacer clic */
+    #clickOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 110;
+      background: rgba(0,0,0,0.55);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      color: white;
+      font-size: 28px;
+      text-align: center;
+      user-select: none;
+    }
+
+    #clickOverlay span {
+      background: rgba(255,255,255,0.12);
+      padding: 18px 32px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.25);
+      backdrop-filter: blur(6px);
     }
 
     /* Main content (hidden until video ends) */
@@ -79,7 +107,6 @@
       border-radius: 10px;
       padding: 8px 12px;
       color: #fff;
-      font-family: sans-serif;
       flex-wrap: wrap;
       justify-content: center;
     }
@@ -107,22 +134,22 @@
 <body>
 
   <!-- Intro video -->
-  <video id="introVideo" src="intro.mp4" autoplay muted playsinline></video>
+  <video id="introVideo" src="intro.mp4" playsinline></video>
+
+  <!-- Overlay: haz clic para activar el audio -->
+  <div id="clickOverlay">
+    <span>▶ Haz clic para empezar</span>
+  </div>
 
   <!-- Main content (hidden at start) -->
   <div id="mainContent">
     <div class="container">
-      <!-- Imagen central -->
       <img src="sixeven2.png" alt="SixEven" class="center" id="sixEven">
-      <!-- Mano izquierda -->
       <img src="67 mano.png" alt="Mano Izquierda" class="hand-left" id="handLeft">
-      <!-- Mano derecha -->
       <img src="67 mano.png" alt="Mano Derecha" class="hand-right" id="handRight">
     </div>
 
-    <!-- Audio principal -->
     <audio id="audio67" src="67.wav" loop></audio>
-    <!-- Audio secundario al click -->
     <audio id="audioSixSeven" src="SIX SEVEN.mp3"></audio>
 
     <div class="audio-ctrl">
@@ -138,6 +165,7 @@
 
   <script>
     const introVideo = document.getElementById('introVideo');
+    const clickOverlay = document.getElementById('clickOverlay');
     const mainContent = document.getElementById('mainContent');
     const audio = document.getElementById('audio67');
     const playBtn = document.getElementById('playPause');
@@ -149,23 +177,37 @@
     const audioSixSeven = document.getElementById('audioSixSeven');
 
     let interval;
-    const beatDuration = 60 / 130 * 1000; // ~462 ms por beat
+    const beatDuration = 60 / 130 * 1000;
+    let isOld = false; // false = sixeven2.png, true = sixseven.png
 
-    // When intro ends → show main content
+    // Al hacer clic → quitar overlay, activar sonido y reproducir el intro
+    clickOverlay.addEventListener('click', async () => {
+      clickOverlay.style.display = 'none';
+      introVideo.muted = false;
+      introVideo.currentTime = 0;
+      try {
+        await introVideo.play();
+      } catch (err) {
+        console.log('Error al reproducir intro:', err);
+      }
+    });
+
+    // Cuando termina el intro → mostrar el contenido principal
     introVideo.addEventListener('ended', () => {
       introVideo.style.display = 'none';
       mainContent.style.display = 'flex';
     });
 
-    // Fallback: if video fails to load, show main content after a short delay
+    // Si el video falla, pasar al contenido principal
     introVideo.addEventListener('error', () => {
       setTimeout(() => {
         introVideo.style.display = 'none';
+        clickOverlay.style.display = 'none';
         mainContent.style.display = 'flex';
-      }, 500);
+      }, 400);
     });
 
-    // Play / Pause button
+    // Controles del contenido principal
     playBtn.addEventListener('click', async () => {
       if (audio.paused) {
         audio.currentTime = 0;
@@ -180,20 +222,28 @@
       }
     });
 
-    // Volume control
     vol.addEventListener('input', (e) => {
       audio.volume = parseFloat(e.target.value);
     });
 
-    // Click on center image → play "SIX SEVEN.mp3"
     sixEven.addEventListener('click', () => {
       audioSixSeven.currentTime = 0;
       audioSixSeven.play();
     });
 
-    // "67 OLD" button → change center image to sixeven.png
+    // Toggle 67 OLD / 67 NEW
     oldBtn.addEventListener('click', () => {
-      sixEven.src = 'sixeven.png';
+      if (isOld) {
+        // Volver a la versión nueva
+        sixEven.src = 'sixeven2.png';
+        oldBtn.textContent = '67 OLD';
+        isOld = false;
+      } else {
+        // Cambiar a la versión old
+        sixEven.src = 'sixseven.png';
+        oldBtn.textContent = '67 NEW';
+        isOld = true;
+      }
     });
 
     function startHands() {
